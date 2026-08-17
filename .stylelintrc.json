@@ -1,0 +1,52 @@
+{
+    "$schema": "https://json.schemastore.org/stylelintrc",
+    "extends": ["stylelint-config-standard"],
+    "rules": {
+        "at-rule-no-unknown": [
+            true,
+            {
+                "ignoreAtRules": [
+                    "theme",
+                    "source",
+                    "layer",
+                    "apply",
+                    "tailwind",
+                    "utility",
+                    "variant",
+                    "plugin"
+                ]
+            }
+        ],
+        "import-notation": null,
+        "alpha-value-notation": null,
+        "color-function-notation": null,
+        "comment-empty-line-before": null,
+        "declaration-block-no-redundant-longhand-properties": null,
+
+        "selector-class-pattern": [
+            "^[a-z][a-z0-9]*(-[a-z0-9]+)*(__[a-z][a-z0-9]*(-[a-z0-9]+)*)?(--[a-z][a-z0-9]*(-[a-z0-9]+)*)?$",
+            {
+                "message": "El patrón de clase debe ser kebab-case o BEM (B__E--M)."
+            }
+        ],
+
+        "value-keyword-case": ["lower", {
+            "camelCaseSvgKeywords": true,
+            "ignoreKeywords": ["Inter", "JetBrains", "Mono", "currentColor"]
+        }],
+
+        "font-family-name-quotes": "always-where-recommended",
+
+        "custom-property-empty-line-before": null,
+
+        "at-rule-empty-line-before": [
+            "always",
+            {
+                "except": ["blockless-after-blockless", "first-nested"],
+                "ignoreAtRules": ["font-face", "theme", "source", "layer", "apply", "import"]
+            }
+        ],
+
+        "color-hex-length": "short"
+    }
+}

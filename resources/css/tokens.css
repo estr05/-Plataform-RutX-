@@ -1,0 +1,47 @@
+:root {
+  /* Paleta Semantica */
+  --rutx-primary: #003B5C;
+  --rutx-primary-dark: #002D47;
+  --rutx-accent: #FF6A13;
+  --rutx-accent-hover: #E65C00;
+  --rutx-accent-light: #FFF3E0;
+  --rutx-secondary: #A8C8E9;
+  --rutx-bg: #F4F6F8;
+  --rutx-surface: #fff;
+  --rutx-surface-grey: #F5F5F5;
+  --rutx-text: #343D45;
+  --rutx-text-muted: #6B7680;
+  --rutx-border: #E0E0E0;
+  --rutx-status-success: #2E7D32;
+  --rutx-status-info: #005691;
+  --rutx-status-warning: #E65100;
+  --rutx-status-error: #C62828;
+  --rutx-status-unknown: #9E9E9E;
+
+  /* Fondos semánticos de feedback */
+  --rutx-alert-success-bg: #E8F5E9;
+  --rutx-alert-info-bg: #E3F2FD;
+  --rutx-alert-warning-bg: #FFF3E0;
+  --rutx-alert-error-bg: #FFEBEE;
+
+  /* Subpaleta de Graficas */
+  --rutx-chart-blue: #005691;
+  --rutx-chart-cyan: #0277BD;
+  --rutx-chart-blue-bg: #E1F5FE;
+
+  /* Geometria y Espaciado */
+  --rutx-radius-sm: 4px;
+  --rutx-radius-md: 8px;
+  --rutx-radius-lg: 12px;
+
+  --rutx-height-input: 44px;
+  --rutx-height-button: 48px;
+  --rutx-height-topbar: 64px;
+
+  --rutx-shadow-base: 0 1px 3px rgba(0,0,0,0.05);
+  --rutx-shadow-hover: 0 2px 8px rgba(0,0,0,0.10);
+
+  --rutx-spacing-sm: 8px;
+  --rutx-spacing-md: 16px;
+  --rutx-spacing-lg: 24px;
+}
