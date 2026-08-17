@@ -3,8 +3,11 @@
 namespace App\Providers;
 
 use App\Models\User;
-use App\Services\RutxApiClient;
+use App\Services\RutxHubClient;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -14,10 +17,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Cliente HTTP central hacia el Sincronizador (frontera única).
+        // Frontera HTTP central hacia el Hub/Relay (servicio único).
         $this->app->singleton(
-            RutxApiClient::class,
-            fn (): RutxApiClient => new RutxApiClient(config('rutx'))
+            RutxHubClient::class,
+            fn (): RutxHubClient => new RutxHubClient(config('rutx'))
         );
     }
 
@@ -32,5 +35,10 @@ class AppServiceProvider extends ServiceProvider
         foreach (config('permissions.catalog', []) as $permission) {
             Gate::define($permission, fn (User $user): bool => $user->hasPermission($permission));
         }
+
+        // Rate limiting del login (P0): 5 intentos por minuto, clave correo+IP.
+        RateLimiter::for('login', fn (Request $request) => Limit::perMinute(5)->by(
+            strtolower((string) $request->input('email')).'|'.$request->ip()
+        ));
     }
 }

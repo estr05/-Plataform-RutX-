@@ -20,9 +20,9 @@ class RutxApiException extends RuntimeException
         $status = $response->status();
 
         $message = match (true) {
-            $status === 401 || $status === 403 => 'El Sincronizador rechazó la autenticación o el permiso.',
-            $status >= 500 => 'El Sincronizador reportó un error interno.',
-            default => 'El Sincronizador devolvió una respuesta inesperada.',
+            $status === 401 || $status === 403 => 'El Hub rechazó la autenticación o el permiso.',
+            $status >= 500 => 'El Hub reportó un error interno.',
+            default => 'El Hub devolvió una respuesta inesperada.',
         };
 
         return new self($message, $status);

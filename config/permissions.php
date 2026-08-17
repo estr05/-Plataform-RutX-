@@ -44,6 +44,7 @@ return [
         // Configuración
         'config.users.read',
         'config.roles.read',
+        'config.roles.write',
         'config.zones.read',
     ],
 

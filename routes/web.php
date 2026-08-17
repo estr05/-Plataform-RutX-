@@ -21,7 +21,8 @@ use Illuminate\Support\Facades\Route;
 // --- Públicas: solo el flujo de inicio de sesión ---
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
+    // throttle:login — máx. 5 intentos/min por correo+IP (P0, ver AppServiceProvider)
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login')->name('login.attempt');
 });
 
 // --- Autenticadas: home y módulos de negocio en cualquier entorno ---

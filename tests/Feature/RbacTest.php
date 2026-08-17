@@ -12,7 +12,11 @@ class RbacTest extends TestCase
 
     private function userWithRole(string $role): User
     {
-        return User::factory()->create(['role' => $role]);
+        // role no es mass-assignable (P1): se fija explícitamente.
+        $user = User::factory()->create();
+        $user->forceFill(['role' => $role])->save();
+
+        return $user;
     }
 
     public function test_administrador_can_access_transfer_view(): void

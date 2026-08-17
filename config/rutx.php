@@ -1,39 +1,43 @@
 <?php
 
 /**
- * Configuración de integración con el Sincronizador (contrato /api/v2/web/*).
+ * Configuración de la frontera con el Hub/Relay central.
  *
- * Fuente única de la frontera: los controladores/Livewire nunca llaman al
- * Sincronizador directamente; usan App\Services\RutxApiClient.
+ * Arquitectura (sprint/2, revisión P0): Laravel habla con el Hub en
+ * https://rutx.quest/api/v1; el Hub resuelve la instalación por identidad.
+ * Laravel NUNCA usa IP, DNS individual ni el puerto :5047 de un
+ * Sincronizador. Los controladores/Livewire usan App\Services\RutxHubClient.
+ *
+ * Estado actual: frontera conceptual. NO conectar todavía contra un Hub
+ * real: el contrato Relay aún no está implementado. Mientras tanto, los
+ * endpoints no se inventan y RUTX_HUB_STUBS_ENABLED=true devuelve la forma
+ * exacta de los DTO sin HTTP.
  *
  * Seguridad:
- *  - Los secretos (client_secret) viven solo en el entorno, nunca en el repo.
+ *  - client_secret vive solo en el entorno, nunca en el repo.
  *  - verify_tls=true por defecto; jamás desactivarlo en producción.
- *  - Nunca versionar host/IP interno real (ver .env.example).
  */
 return [
 
-    // Base de la API web del Sincronizador.
-    'base_url' => env('API_WEB_BASE_URL'),
+    // Base conceptual del Hub (personal de plataforma).
+    'base_url' => env('RUTX_HUB_BASE_URL', 'https://rutx.quest/api/v1'),
 
     // Timeouts (segundos).
-    'timeout' => (int) env('API_WEB_TIMEOUT', 30),
-    'connect_timeout' => (int) env('API_WEB_CONNECT_TIMEOUT', 10),
+    'timeout' => (int) env('RUTX_HUB_TIMEOUT', 30),
+    'connect_timeout' => (int) env('RUTX_HUB_CONNECT_TIMEOUT', 10),
 
     // Endpoint de token (client-credentials) y credenciales de cliente.
-    'auth_url' => env('API_WEB_AUTH_URL'),
-    'client_id' => env('API_WEB_CLIENT_ID'),
-    'client_secret' => env('API_WEB_CLIENT_SECRET'),
+    'auth_url' => env('RUTX_HUB_AUTH_URL', 'https://rutx.quest/api/v1/auth'),
+    'client_id' => env('RUTX_HUB_CLIENT_ID'),
+    'client_secret' => env('RUTX_HUB_CLIENT_SECRET'),
 
     // Verificación TLS obligatoria.
-    'verify_tls' => env('API_WEB_VERIFY_TLS', true),
+    'verify_tls' => env('RUTX_HUB_VERIFY_TLS', true),
 
-    // Stubs de servicios mientras el Sincronizador no publique los endpoints
-    // (forma exacta de los DTO del contrato). Desactivar al conectar lo real.
-    'stubs_enabled' => env('API_WEB_STUBS_ENABLED', false),
+    // Stubs de servicios hasta que el contrato Relay esté implementado.
+    'stubs_enabled' => env('RUTX_HUB_STUBS_ENABLED', false),
 
-    // TTL del token en caché (segundos). El Sincronizador puede devolver
-    // expires_in; si lo hace, se respeta y esto es solo el respaldo.
-    'token_cache_ttl' => (int) env('API_WEB_TOKEN_TTL', 300),
+    // TTL de respaldo del token (segundos); expires_in del Hub lo reemplaza.
+    'token_cache_ttl' => (int) env('RUTX_HUB_TOKEN_TTL', 300),
 
 ];
