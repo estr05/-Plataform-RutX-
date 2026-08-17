@@ -109,6 +109,62 @@ class RutxHubClientTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_stubs_are_enabled_by_default_in_testing_via_container(): void
+    {
+        // phpunit.xml y tests/bootstrap.php fuerzan RUTX_HUB_STUBS_ENABLED=true:
+        // el singleton del contenedor (config('rutx')) debe devolver DTO sin HTTP.
+        Http::fake();
+
+        $client = app(RutxHubClient::class);
+        $data = $client->get('/customers');
+
+        $this->assertArrayHasKey('meta', $data);
+        $this->assertSame(0, $data['meta']['total']);
+        Http::assertNothingSent();
+    }
+
+    public function test_disabled_stubs_without_credentials_fails_explicitly(): void
+    {
+        Http::fake();
+
+        $client = $this->client([
+            'stubs_enabled' => false,
+            'client_id' => '',
+            'client_secret' => '',
+        ]);
+
+        try {
+            $client->get('/customers');
+            $this->fail('Debería fallar explícitamente sin credenciales.');
+        } catch (RutxApiException $e) {
+            $this->assertStringContainsString('RUTX_HUB_CLIENT_ID', $e->getMessage());
+            $this->assertStringContainsString('RUTX_HUB_CLIENT_SECRET', $e->getMessage());
+        }
+
+        Http::assertNothingSent();
+    }
+
+    public function test_disabled_stubs_without_https_url_fails_explicitly(): void
+    {
+        Http::fake();
+
+        $client = $this->client([
+            'stubs_enabled' => false,
+            'base_url' => 'http://rutx.quest/api/v1',
+            'auth_url' => 'http://rutx.quest/api/v1/auth',
+        ]);
+
+        try {
+            $client->get('/customers');
+            $this->fail('Debería fallar explícitamente con URL no HTTPS.');
+        } catch (RutxApiException $e) {
+            $this->assertStringContainsString('RUTX_HUB_BASE_URL', $e->getMessage());
+            $this->assertStringContainsString('RUTX_HUB_AUTH_URL', $e->getMessage());
+        }
+
+        Http::assertNothingSent();
+    }
+
     public function test_unauthorized_retries_once_with_fresh_token(): void
     {
         Http::fake([

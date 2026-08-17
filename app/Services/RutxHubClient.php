@@ -25,6 +25,9 @@ use Illuminate\Support\Facades\Http;
  *    caché namespaced; TTL derivado de expires_in con margen de seguridad.
  *  - 401 → se descarta el token y se reintenta una sola vez (operaciones
  *    seguras/idempotentes). Escrituras futuras usarán idempotency key.
+ *  - Stubs por entorno (sprint/3): local/testing fuerzan stubs_enabled=true;
+ *    con stubs desactivados, si faltan credenciales o la URL no es HTTPS,
+ *    la primera solicitud falla explícitamente (sin inferencias silenciosas).
  */
 class RutxHubClient
 {
@@ -48,6 +51,8 @@ class RutxHubClient
      */
     public function accessToken(): string
     {
+        $this->assertConfigured();
+
         $key = $this->tokenCacheKey();
 
         if (($cached = Cache::get($key)) !== null) {
@@ -73,6 +78,8 @@ class RutxHubClient
         if ($this->config['stubs_enabled']) {
             return $this->stub($path);
         }
+
+        $this->assertConfigured();
 
         try {
             $response = $send($this->http());
@@ -187,5 +194,45 @@ class RutxHubClient
                 'meta' => ['total' => 0],
             ],
         };
+    }
+
+    /**
+     * Valida la configuración cuando los stubs están desactivados: sin
+     * credenciales o sin URL HTTPS válida la primera solicitud falla de forma
+     * explícita. Nunca se infiere silenciosamente una conexión real.
+     */
+    private function assertConfigured(): void
+    {
+        if ($this->config['stubs_enabled']) {
+            return;
+        }
+
+        $clientId = (string) ($this->config['client_id'] ?? '');
+        $clientSecret = (string) ($this->config['client_secret'] ?? '');
+
+        $missing = [];
+
+        if ($clientId === '') {
+            $missing[] = 'RUTX_HUB_CLIENT_ID';
+        }
+
+        if ($clientSecret === '') {
+            $missing[] = 'RUTX_HUB_CLIENT_SECRET';
+        }
+
+        foreach (['RUTX_HUB_BASE_URL' => 'base_url', 'RUTX_HUB_AUTH_URL' => 'auth_url'] as $name => $key) {
+            $url = (string) ($this->config[$key] ?? '');
+
+            if (! str_starts_with($url, 'https://') || filter_var($url, FILTER_VALIDATE_URL) === false) {
+                $missing[] = $name.' (HTTPS)';
+            }
+        }
+
+        if ($missing !== []) {
+            throw new RutxApiException(
+                'Configuración del Hub incompleta: '.implode(', ', $missing)
+                .'. Defina las credenciales como secretos del entorno o active los stubs (RUTX_HUB_STUBS_ENABLED=true).'
+            );
+        }
     }
 }
