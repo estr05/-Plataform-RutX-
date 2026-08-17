@@ -10,6 +10,7 @@ use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 /**
  * RutxHubClient — frontera HTTP central hacia el Hub/Relay central.
@@ -23,8 +24,9 @@ use Illuminate\Support\Facades\Http;
  *    conecta un Hub real: stubs_enabled=true devuelve la forma de los DTO.
  *  - Autenticación servicio-a-servicio (client-credentials) con token en
  *    caché namespaced; TTL derivado de expires_in con margen de seguridad.
- *  - 401 → se descarta el token y se reintenta una sola vez (operaciones
- *    seguras/idempotentes). Escrituras futuras usarán idempotency key.
+ *  - 401 → se descarta el token y se reintenta una sola vez SOLO en lecturas
+ *    GET o escrituras con Idempotency-Key; una escritura sin clave se
+ *    rechaza antes de enviarse (sprint/3).
  *  - Stubs por entorno (sprint/3): local/testing fuerzan stubs_enabled=true;
  *    con stubs desactivados, si faltan credenciales o la URL no es HTTPS,
  *    la primera solicitud falla explícitamente (sin inferencias silenciosas).
@@ -38,12 +40,45 @@ class RutxHubClient
 
     public function get(string $path, array $params = []): array
     {
-        return $this->request(fn (PendingRequest $http) => $http->get($path, $params), $path);
+        return $this->request(
+            fn (PendingRequest $http) => $http->get($path, $params),
+            $path,
+            headers: [],
+            retryOnUnauthorized: true,
+        );
     }
 
-    public function post(string $path, array $body = []): array
+    /**
+     * Escritura al Hub. Exige una Idempotency-Key (UUID/ULID): sin ella la
+     * operación se rechaza antes de enviarse; con ella, un reintento por 401
+     * usa la MISMA clave, nunca una nueva (sprint/3, contrato de idempotencia).
+     *
+     * @param  array<string, mixed>  $body
+     */
+    public function post(string $path, array $body = [], ?string $idempotencyKey = null): array
     {
-        return $this->request(fn (PendingRequest $http) => $http->post($path, $body), $path);
+        if (! is_string($idempotencyKey) || $idempotencyKey === '') {
+            throw new RutxApiException(
+                'Escritura rechazada: se requiere una Idempotency-Key (UUID/ULID) para operaciones de escritura al Hub.'
+            );
+        }
+
+        return $this->request(
+            fn (PendingRequest $http) => $http->withHeaders(['Idempotency-Key' => $idempotencyKey])->post($path, $body),
+            $path,
+            headers: ['Idempotency-Key' => $idempotencyKey],
+            retryOnUnauthorized: true,
+        );
+    }
+
+    /**
+     * Genera una clave de idempotencia para una acción de negocio. El servicio
+     * que inicia la escritura la conserva durante TODO el intento y la reutiliza
+     * en cualquier reintento; nunca se genera una nueva a mitad del flujo.
+     */
+    public function newIdempotencyKey(): string
+    {
+        return (string) Str::uuid();
     }
 
     /**
@@ -71,10 +106,16 @@ class RutxHubClient
      * reintenta una sola vez ante un 401 (token revocado).
      *
      * @param  callable(PendingRequest): Response  $send
+     * @param  array<string, string>  $headers  cabeceras a enviar en la petición inicial Y en el reintento
      * @return array<string, mixed>
      */
-    private function request(callable $send, string $path, bool $retried = false): array
-    {
+    private function request(
+        callable $send,
+        string $path,
+        array $headers = [],
+        bool $retryOnUnauthorized = true,
+        bool $retried = false,
+    ): array {
         if ($this->config['stubs_enabled']) {
             return $this->stub($path);
         }
@@ -82,17 +123,18 @@ class RutxHubClient
         $this->assertConfigured();
 
         try {
-            $response = $send($this->http());
+            $response = $send($this->http($headers));
         } catch (ConnectionException $e) {
             throw new RutxApiException('No se pudo conectar con el Hub. Inténtelo más tarde.', 0, $e);
         }
 
         if ($response->unauthorized()) {
-            // Token vencido o revocado: descartarlo y reintentar una vez.
+            // Token vencido o revocado: descartarlo y reintentar una sola vez,
+            // SOLO si la operación lo permite (GET o escritura con clave).
             Cache::forget($this->tokenCacheKey());
 
-            if (! $retried) {
-                return $this->request($send, $path, retried: true);
+            if ($retryOnUnauthorized && ! $retried) {
+                return $this->request($send, $path, $headers, $retryOnUnauthorized, retried: true);
             }
 
             throw RutxApiException::fromResponse('request', $response);
@@ -107,14 +149,17 @@ class RutxHubClient
 
     /**
      * PendingRequest autenticado con la configuración de frontera.
+     *
+     * @param  array<string, string>  $headers
      */
-    private function http(): PendingRequest
+    private function http(array $headers = []): PendingRequest
     {
         return Http::baseUrl($this->config['base_url'])
             ->timeout($this->config['timeout'])
             ->connectTimeout($this->config['connect_timeout'])
             ->withOptions(['verify' => (bool) $this->config['verify_tls']])
             ->withToken($this->accessToken())
+            ->withHeaders($headers)
             ->acceptJson()
             ->asJson();
     }

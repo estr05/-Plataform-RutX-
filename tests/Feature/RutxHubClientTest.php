@@ -198,6 +198,97 @@ class RutxHubClientTest extends TestCase
         $this->assertFalse(Cache::has('rutx:hub:'.substr(md5('https://rutx.quest/api/v1|rutx-web-client'), 0, 16).':access_token'));
     }
 
+    public function test_post_without_idempotency_key_is_rejected_before_sending(): void
+    {
+        Http::fake();
+
+        try {
+            $this->client()->post('/customers', ['name' => 'Cliente X']);
+            $this->fail('Una escritura sin Idempotency-Key debe rechazarse.');
+        } catch (RutxApiException $e) {
+            $this->assertStringContainsString('Idempotency-Key', $e->getMessage());
+        }
+
+        Http::assertNothingSent();
+    }
+
+    public function test_post_sends_idempotency_key_header(): void
+    {
+        Http::fake([
+            'https://rutx.quest/api/v1/auth' => Http::response(['access_token' => 'tok-abc']),
+            'https://rutx.quest/api/v1/customers*' => Http::response(['data' => ['id' => 7]], 201),
+        ]);
+
+        $data = $this->client()->post('/customers', ['name' => 'Cliente X'], 'key-0001');
+
+        $this->assertSame(7, $data['data']['id']);
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/customers')
+            && $request->hasHeader('Idempotency-Key', 'key-0001'));
+    }
+
+    public function test_post_with_key_retries_once_with_same_key_after_401(): void
+    {
+        Http::fake([
+            'https://rutx.quest/api/v1/auth' => Http::response(['access_token' => 'tok-fresh']),
+            'https://rutx.quest/api/v1/customers*' => Http::sequence()
+                ->push([], 401) // token revocado: reintento permitido por la clave
+                ->push(['data' => ['id' => 7]], 201),
+        ]);
+
+        $data = $this->client()->post('/customers', ['name' => 'Cliente X'], 'key-0001');
+
+        $this->assertSame(7, $data['data']['id']);
+        // auth + 401 + re-auth + reintento = 4; ambos POST llevan la MISMA clave.
+        Http::assertSentCount(4);
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/customers')
+            && $request->hasHeader('Idempotency-Key', 'key-0001'));
+    }
+
+    public function test_post_without_key_never_retries(): void
+    {
+        // El rechazo ocurre antes de cualquier HTTP: ni siquiera se pide token.
+        Http::fake();
+
+        try {
+            $this->client()->post('/customers', ['name' => 'Cliente X']);
+            $this->fail('Debería rechazarse la escritura sin clave.');
+        } catch (RutxApiException) {
+            // esperado
+        }
+
+        Http::assertNothingSent();
+    }
+
+    public function test_conflict_409_throws_without_retry(): void
+    {
+        Http::fake([
+            'https://rutx.quest/api/v1/auth' => Http::response(['access_token' => 'tok-1']),
+            // Mismo key + cuerpo distinto: el Hub responde 409 y nunca procesa la segunda escritura.
+            'https://rutx.quest/api/v1/customers*' => Http::response(['error' => 'conflict'], 409),
+        ]);
+
+        try {
+            $this->client()->post('/customers', ['name' => 'Otro'], 'key-0001');
+            $this->fail('Debería lanzar RutxApiException por conflicto de idempotencia.');
+        } catch (RutxApiException $e) {
+            $this->assertSame(409, $e->getCode());
+            $this->assertStringContainsString('idempotencia', strtolower($e->getMessage()));
+        }
+
+        // auth + 1 POST: sin reintento.
+        Http::assertSentCount(2);
+    }
+
+    public function test_new_idempotency_key_is_uuid(): void
+    {
+        $key = $this->client()->newIdempotencyKey();
+
+        $this->assertMatchesRegularExpression(
+            '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/',
+            $key
+        );
+    }
+
     public function test_server_error_throws_friendly_exception(): void
     {
         Http::fake([
