@@ -1,0 +1,73 @@
+name: Quality & Testing
+
+on:
+  push:
+    branches: [ main, dev, 'sprint/**' ]
+  pull_request:
+    branches: [ main, dev, 'sprint/**' ]
+
+jobs:
+  frontend-quality:
+    name: Frontend Quality & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Run frontend linter (CSS & JS)
+        run: npm run lint
+
+      - name: Build production assets
+        run: npm run build
+
+      - name: Run anti-hex design token audit
+        run: npm run check-tokens
+
+  php-quality:
+    name: PHP Quality & Testing
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          extensions: mbstring, pdo, pdo_sqlite, bcmath, json, ctype
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare environment file
+        run: cp .env.example .env
+
+      - name: Generate application key
+        run: php artisan key:generate --force
+
+      - name: Run Pint code style check
+        run: vendor/bin/pint --test
+
+      - name: Test configuration cacheability
+        run: |
+          php artisan config:clear
+          php artisan config:cache
+          php artisan config:clear
+
+      - name: Run PHPUnit test suite
+        run: php artisan test
+
+      - name: Clean configuration cache
+        run: php artisan config:clear

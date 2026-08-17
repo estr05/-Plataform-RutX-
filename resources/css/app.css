@@ -1,0 +1,234 @@
+@import 'tailwindcss';
+@import 'tokens.css';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme {
+    --font-sans: Inter, system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, sfmono-regular, monospace;
+
+    /* Theme colors based on tokens */
+    --color-rutx-primary: var(--rutx-primary);
+    --color-rutx-primary-dark: var(--rutx-primary-dark);
+    --color-rutx-accent: var(--rutx-accent);
+    --color-rutx-accent-hover: var(--rutx-accent-hover);
+    --color-rutx-accent-light: var(--rutx-accent-light);
+    --color-rutx-secondary: var(--rutx-secondary);
+    --color-rutx-bg: var(--rutx-bg);
+    --color-rutx-surface: var(--rutx-surface);
+    --color-rutx-surface-grey: var(--rutx-surface-grey);
+    --color-rutx-text: var(--rutx-text);
+    --color-rutx-text-muted: var(--rutx-text-muted);
+    --color-rutx-border: var(--rutx-border);
+    --color-rutx-status-success: var(--rutx-status-success);
+    --color-rutx-status-info: var(--rutx-status-info);
+    --color-rutx-status-warning: var(--rutx-status-warning);
+    --color-rutx-status-error: var(--rutx-status-error);
+    --color-rutx-status-unknown: var(--rutx-status-unknown);
+
+    /* Shadows */
+    --shadow-rutx-base: var(--rutx-shadow-base);
+    --shadow-rutx-hover: var(--rutx-shadow-hover);
+}
+
+@layer components {
+    .rutx-feedback-stack {
+        position: fixed;
+        right: var(--rutx-spacing-md);
+        bottom: var(--rutx-spacing-md);
+        z-index: 60;
+        width: min(100% - (var(--rutx-spacing-md) * 2), 26rem);
+        pointer-events: none;
+    }
+
+    .rutx-feedback-toast {
+        --rutx-feedback-color: var(--rutx-status-info);
+        --rutx-feedback-background: var(--rutx-alert-info-bg);
+
+        display: grid;
+        grid-template-columns: 1.5rem minmax(0, 1fr) 2rem;
+        gap: var(--rutx-spacing-sm);
+        align-items: start;
+        padding: var(--rutx-spacing-md);
+        color: var(--rutx-feedback-color);
+        background-color: var(--rutx-feedback-background);
+        border: 1px solid var(--rutx-feedback-color);
+        border-radius: var(--rutx-radius-md);
+        box-shadow: var(--rutx-shadow-hover);
+        pointer-events: auto;
+        animation: rutx-feedback-enter 160ms ease-out;
+    }
+
+    .rutx-feedback-toast--success {
+        --rutx-feedback-color: var(--rutx-status-success);
+        --rutx-feedback-background: var(--rutx-alert-success-bg);
+    }
+
+    .rutx-feedback-toast--info {
+        --rutx-feedback-color: var(--rutx-status-info);
+        --rutx-feedback-background: var(--rutx-alert-info-bg);
+    }
+
+    .rutx-feedback-toast--warning {
+        --rutx-feedback-color: var(--rutx-status-warning);
+        --rutx-feedback-background: var(--rutx-alert-warning-bg);
+    }
+
+    .rutx-feedback-toast--error {
+        --rutx-feedback-color: var(--rutx-status-error);
+        --rutx-feedback-background: var(--rutx-alert-error-bg);
+    }
+
+    .rutx-feedback-toast__icon {
+        width: 1.5rem;
+        height: 1.5rem;
+        flex: none;
+    }
+
+    .rutx-feedback-toast__content {
+        min-width: 0;
+    }
+
+    .rutx-feedback-toast__title,
+    .rutx-feedback-toast__message {
+        margin: 0;
+    }
+
+    .rutx-feedback-toast__title {
+        font-size: 0.875rem;
+        font-weight: 700;
+        line-height: 1.4;
+    }
+
+    .rutx-feedback-toast__message {
+        color: var(--rutx-text);
+        font-size: 0.875rem;
+        line-height: 1.5;
+    }
+
+    .rutx-feedback-toast__title + .rutx-feedback-toast__message {
+        margin-top: 0.125rem;
+    }
+
+    .rutx-feedback-toast__action,
+    .rutx-feedback-toast__close {
+        border-radius: var(--rutx-radius-sm);
+        cursor: pointer;
+    }
+
+    .rutx-feedback-toast__action {
+        display: inline-flex;
+        min-height: 2rem;
+        margin-top: var(--rutx-spacing-sm);
+        padding: 0.25rem 0.5rem;
+        color: var(--rutx-feedback-color);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        background: transparent;
+        border: 1px solid currentColor;
+    }
+
+    .rutx-feedback-toast__action:hover {
+        color: var(--rutx-surface);
+        background-color: var(--rutx-feedback-color);
+    }
+
+    .rutx-feedback-toast__close {
+        display: inline-flex;
+        width: 2rem;
+        height: 2rem;
+        align-items: center;
+        justify-content: center;
+        color: var(--rutx-feedback-color);
+        background: transparent;
+        border: 0;
+    }
+
+    .rutx-feedback-toast__close:hover {
+        background-color: var(--rutx-surface);
+    }
+
+    .rutx-feedback-toast__close svg {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+
+    .rutx-feedback-noscript {
+        position: fixed;
+        right: var(--rutx-spacing-md);
+        bottom: var(--rutx-spacing-md);
+        z-index: 60;
+        width: min(100% - (var(--rutx-spacing-md) * 2), 26rem);
+    }
+
+    @keyframes rutx-feedback-enter {
+        from {
+            opacity: 0;
+            transform: translateY(0.5rem);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .rutx-feedback-toast {
+            animation: none;
+        }
+    }
+}
+
+@layer base {
+    @font-face {
+        font-family: Inter;
+        src: url('/fonts/inter/Inter-Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+    }
+
+    @font-face {
+        font-family: Inter;
+        src: url('/fonts/inter/Inter-Medium.woff2') format('woff2');
+        font-weight: 500;
+        font-style: normal;
+        font-display: swap;
+    }
+
+    @font-face {
+        font-family: Inter;
+        src: url('/fonts/inter/Inter-SemiBold.woff2') format('woff2');
+        font-weight: 600;
+        font-style: normal;
+        font-display: swap;
+    }
+
+    @font-face {
+        font-family: Inter;
+        src: url('/fonts/inter/Inter-Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-style: normal;
+        font-display: swap;
+    }
+
+    @font-face {
+        font-family: 'JetBrains Mono';
+        src: url('/fonts/jetbrains-mono/JetBrainsMono-Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+    }
+
+    body {
+        @apply bg-rutx-bg text-rutx-text font-sans antialiased;
+    }
+    
+    /* Foco visible de accesibilidad */
+    *:focus-visible {
+        @apply outline-none ring-2 ring-rutx-primary ring-offset-2 ring-offset-rutx-bg;
+    }
+}
