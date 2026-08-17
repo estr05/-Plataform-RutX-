@@ -12,19 +12,25 @@ class CreateAdminCommand extends Command
 {
     protected $signature = 'user:create-admin
                             {--name= : Nombre visible (default: Administrador)}
-                            {--email= : Correo del administrador (o env ADMIN_EMAIL)}
-                            {--password= : Contraseña (o env ADMIN_PASSWORD). Mínimo 12 caracteres}';
+                            {--email= : Correo del administrador (o env ADMIN_EMAIL)}';
 
     protected $description = 'Crea el primer usuario administrador sin credenciales conocidas.';
 
     public function handle(): int
     {
         $email = $this->option('email') ?? env('ADMIN_EMAIL');
-        $password = $this->option('password') ?? env('ADMIN_PASSWORD');
         $name = $this->option('name') ?? 'Administrador';
 
-        if (! $email || ! $password) {
-            $this->error('Se requieren --email y --password (o ADMIN_EMAIL/ADMIN_PASSWORD en el entorno).');
+        if (! $email) {
+            $this->error('Se requiere --email (o ADMIN_EMAIL en el entorno).');
+
+            return self::FAILURE;
+        }
+
+        $password = $this->resolvePassword();
+
+        if ($password === null) {
+            $this->error('No se pudo obtener una contraseña. Ejecútelo de forma interactiva o defina ADMIN_PASSWORD como secreto del entorno.');
 
             return self::FAILURE;
         }
@@ -57,8 +63,36 @@ class CreateAdminCommand extends Command
         // role no es mass-assignable (P1): solo este comando/servicio lo fija.
         $user->forceFill(['role' => 'administrador'])->save();
 
+        // Los logs y la salida muestran solo el correo, nunca la contraseña.
         $this->info("Administrador creado: {$user->email}");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Contraseña del primer administrador (sprint/3):
+     *  - Interactivo: se solicita por entrada secreta y se confirma; nunca se
+     *    acepta como argumento de terminal (fuera del historial de shell).
+     *  - No interactivo: SOLO vía ADMIN_PASSWORD inyectado como secreto del
+     *    entorno; nunca en .env.example, scripts versionados ni salida.
+     */
+    private function resolvePassword(): ?string
+    {
+        if ($this->option('no-interaction')) {
+            $password = env('ADMIN_PASSWORD');
+
+            return is_string($password) && $password !== '' ? $password : null;
+        }
+
+        $password = $this->secret('Contraseña del administrador (mínimo 12 caracteres)');
+        $confirmation = $this->secret('Confirme la contraseña');
+
+        if ($password !== $confirmation) {
+            $this->error('Las contraseñas no coinciden.');
+
+            return null;
+        }
+
+        return $password;
     }
 }

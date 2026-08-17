@@ -13,15 +13,16 @@ class DevelopmentSeeder extends Seeder
     use WithoutModelEvents;
 
     /**
-     * Usuario administrador de desarrollo (solo local/testing).
+     * Usuario administrador de desarrollo (SOLO local/testing).
      *
      * Credenciales conocidas: admin@rutx.test / password.
-     * Nunca ejecutar en staging/producción: el guard de abajo lo bloquea.
+     * Se bloquea expresamente fuera de local/testing, incluido staging:
+     * un entorno alcanzable jamás debe sembrar credenciales predecibles.
      */
     public function run(): void
     {
-        if (app()->isProduction()) {
-            $this->command?->warn('DevelopmentSeeder no se ejecuta en producción.');
+        if (! app()->environment(['local', 'testing'])) {
+            $this->command?->warn('DevelopmentSeeder solo se ejecuta en local/testing; abortado.');
 
             return;
         }
