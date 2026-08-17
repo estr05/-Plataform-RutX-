@@ -15,11 +15,11 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
+        // Usuario administrador para desarrollo/QA (sprint/2, auth local).
+        // Contraseña: password — rotarla en cualquier entorno compartido.
         User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+            'name' => 'Administrador RutX',
+            'email' => 'admin@rutx.test',
         ]);
     }
 }
