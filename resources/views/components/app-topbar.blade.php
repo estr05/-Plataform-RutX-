@@ -39,6 +39,11 @@
 
         @foreach(config('navigation.modules', []) as $moduleKey => $module)
             @php
+                // RBAC (sprint/2): solo módulos cuyo permiso de acceso tenga el usuario.
+                if (Auth::check() && ! Auth::user()->can($module['permission'] ?? '')) {
+                    continue;
+                }
+
                 $isActive = str_starts_with($currentRoute, $moduleKey . '.');
                 $defaultRoute = $module['default_route'] ?? '';
                 $href = (Route::has($defaultRoute)) ? route($defaultRoute) : '#';

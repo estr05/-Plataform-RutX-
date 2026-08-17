@@ -31,10 +31,14 @@
             </x-slot>
         </x-page-header>
 
-        {{-- Módulos disponibles --}}
+        {{-- Módulos disponibles — filtrados por permiso RBAC (sprint/2) --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             @foreach(config('navigation.modules', []) as $moduleKey => $module)
                 @php
+                    if (! Auth::user()->can($module['permission'] ?? '')) {
+                        continue;
+                    }
+
                     $href = Route::has($module['default_route']) ? route($module['default_route']) : '#';
                 @endphp
                 <a

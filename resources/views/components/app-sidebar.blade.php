@@ -78,10 +78,17 @@
             </h2>
         </div>
 
-        {{-- Vistas del módulo activo --}}
+        {{-- Vistas del módulo activo — filtradas por permiso RBAC (sprint/2) --}}
+        @php
+            $visibleViews = collect($currentModule['views'])->filter(
+                fn (array $view): bool => Auth::user()->can($view['permission'] ?? '')
+            );
+        @endphp
+
+        @if($visibleViews->isNotEmpty())
         <nav class="flex-1 py-4 overflow-y-auto overflow-x-hidden" aria-label="{{ $currentModule['label'] }}">
             <ul class="space-y-1" role="list">
-                @foreach($currentModule['views'] as $viewRoute => $view)
+                @foreach($visibleViews as $viewRoute => $view)
                     @php
                         $isViewActive = ($currentRoute === $viewRoute);
                         $href         = Route::has($viewRoute) ? route($viewRoute) : '#';
@@ -119,6 +126,14 @@
                 @endforeach
             </ul>
         </nav>
+        @else
+            {{-- Módulo visible pero sin vistas permitidas para el rol --}}
+            <div class="flex-1 flex items-center justify-center p-6 text-white/40 text-sm text-center">
+                <span class="group-data-[collapsed=true]/sidebar:hidden">
+                    {{ __('Sin vistas disponibles para su rol') }}
+                </span>
+            </div>
+        @endif
 
     @else
         {{-- Placeholder cuando no hay módulo seleccionado --}}

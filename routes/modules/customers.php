@@ -3,11 +3,11 @@
 use Illuminate\Support\Facades\Route;
 
 /**
- * Rutas del módulo Clientes — scaffold estructural.
- * Día 2 — sin endpoint v2; solo estructura navegable.
- * Cuando exista autenticación real, proteger con middleware 'auth.session'.
+ * Rutas del módulo Clientes.
+ * Protegidas por el grupo 'auth' (routes/web.php) y por permiso RBAC vía
+ * el middleware 'can:' (config/permissions.php).
  */
-Route::prefix('customers')->name('customers.')->group(function () {
-    Route::get('/', fn () => view('modules.customers.index'))->name('index');
-    Route::get('/transfer', fn () => view('modules.customers.transfer'))->name('transfer');
+Route::prefix('customers')->name('customers.')->middleware('can:module.customers.access')->group(function () {
+    Route::get('/', fn () => view('modules.customers.index'))->middleware('can:customers.read')->name('index');
+    Route::get('/transfer', fn () => view('modules.customers.transfer'))->middleware('can:customers.transfer')->name('transfer');
 });

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'role'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -28,5 +28,21 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * ¿El usuario tiene el permiso dado?
+     *
+     * Resuelve el rol desde config/permissions.php (fuente única de RBAC).
+     * El rol 'administrador' usa el comodín '*' (todos los permisos).
+     */
+    public function hasPermission(string $permission): bool
+    {
+        $role = $this->role ?: 'lector';
+
+        $granted = config("permissions.roles.{$role}", []);
+
+        return in_array('*', $granted, true)
+            || in_array($permission, $granted, true);
     }
 }
