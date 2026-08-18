@@ -35,6 +35,7 @@ $testEnv = [
     'QUEUE_CONNECTION' => 'sync',
     'SESSION_DRIVER' => 'array',
     'SESSION_PATH' => '/',
+    'RUTX_HUB_STUBS_ENABLED' => 'true',
     'PULSE_ENABLED' => 'false',
     'TELESCOPE_ENABLED' => 'false',
     'NIGHTWATCH_ENABLED' => 'false',

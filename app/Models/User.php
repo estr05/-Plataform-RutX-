@@ -29,4 +29,20 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    /**
+     * ¿El usuario tiene el permiso dado?
+     *
+     * Resuelve el rol desde config/permissions.php (fuente única de RBAC).
+     * El rol 'administrador' usa el comodín '*' (todos los permisos).
+     */
+    public function hasPermission(string $permission): bool
+    {
+        $role = $this->role ?: 'lector';
+
+        $granted = config("permissions.roles.{$role}", []);
+
+        return in_array('*', $granted, true)
+            || in_array($permission, $granted, true);
+    }
 }
